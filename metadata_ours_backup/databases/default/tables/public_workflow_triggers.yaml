@@ -1,0 +1,77 @@
+# Same Layer 2 pattern as workflow_steps: creating a `webhook` trigger
+# (which exposes an inbound URL that can start executions and consume
+# quota) is restricted to owner.
+
+table:
+  schema: public
+  name: workflow_triggers
+object_relationships:
+  - name: workflow
+    using:
+      foreign_key_constraint_on: workflow_id
+select_permissions:
+  - role: user
+    permission:
+      columns: [id, workflow_id, type, config, enabled, created_at]
+      filter:
+        workflow:
+          organization:
+            org_members:
+              user_id: { _eq: X-Hasura-User-Id }
+insert_permissions:
+  - role: user
+    permission:
+      columns: [workflow_id, type, config, enabled]
+      check:
+        _or:
+          - _and:
+              - type: { _neq: webhook }
+              - workflow:
+                  organization:
+                    org_members:
+                      _and:
+                        - user_id: { _eq: X-Hasura-User-Id }
+                        - role: { _eq: editor }
+          - workflow:
+              organization:
+                org_members:
+                  _and:
+                    - user_id: { _eq: X-Hasura-User-Id }
+                    - role: { _eq: owner }
+update_permissions:
+  - role: user
+    permission:
+      columns: [type, config, enabled]
+      filter:
+        workflow:
+          organization:
+            org_members:
+              _and:
+                - user_id: { _eq: X-Hasura-User-Id }
+                - role: { _in: [owner, editor] }
+      check:
+        _or:
+          - _and:
+              - type: { _neq: webhook }
+              - workflow:
+                  organization:
+                    org_members:
+                      _and:
+                        - user_id: { _eq: X-Hasura-User-Id }
+                        - role: { _eq: editor }
+          - workflow:
+              organization:
+                org_members:
+                  _and:
+                    - user_id: { _eq: X-Hasura-User-Id }
+                    - role: { _eq: owner }
+delete_permissions:
+  - role: user
+    permission:
+      filter:
+        workflow:
+          organization:
+            org_members:
+              _and:
+                - user_id: { _eq: X-Hasura-User-Id }
+                - role: { _in: [owner, editor] }

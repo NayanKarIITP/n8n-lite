@@ -1,0 +1,23 @@
+table:
+  schema: public
+  name: workflow_run_stats_view
+array_relationships:
+  - name: org_members
+    using:
+      manual_configuration:
+        remote_table:
+          schema: public
+          name: org_members
+        column_mapping:
+          org_id: org_id
+select_permissions:
+  - role: user
+    permission:
+      columns: [workflow_id, org_id, completed_runs, failed_runs, avg_duration_seconds]
+      filter:
+        org_members:
+          user_id: { _eq: X-Hasura-User-Id }
+comment: >
+  Aggregation requirement #2 (average workflow run duration), exposed as
+  `workflows { run_stats { avg_duration_seconds } }` via the manual
+  relationship declared in public_workflows.yaml.

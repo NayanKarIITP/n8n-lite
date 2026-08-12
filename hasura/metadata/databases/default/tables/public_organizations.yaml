@@ -1,0 +1,54 @@
+# DESIGN NOTE (applies to every permissions.yaml file in this directory):
+#
+# Hasura's X-Hasura-Role session variable is per-request, not per-org. Since
+# a single user can be `owner` in Org A and `viewer` in Org B, we do NOT map
+# org_members.role directly onto Hasura roles. Instead every authenticated
+# request carries a single Hasura role: "user". All authorization is done via
+# row-level `filter` / `check` expressions that traverse the org_members
+# relationship and inspect BOTH:
+#   1. org_members.user_id = X-Hasura-User-Id   (membership — Layer 1a)
+#   2. org_members.role IN (...)                (role — Layer 1b)
+# This is what the assignment means by "verify BOTH org membership AND role,
+# based on org_members, never trusting a client-supplied org_id" — the org_id
+# on the resource is irrelevant to the permission; only a matching
+# org_members row grants access, so IDs cannot be guessed around it.
+#
+# The `public` (anonymous) role has no permissions on any table in this app.
+
+table:
+  schema: public
+  name: organizations
+array_relationships:
+  - name: org_members
+    using:
+      foreign_key_constraint_on:
+        column: org_id
+        table:
+          schema: public
+          name: org_members
+  - name: workflows
+    using:
+      foreign_key_constraint_on:
+        column: org_id
+        table:
+          schema: public
+          name: workflows
+select_permissions:
+  - role: user
+    permission:
+      columns: [id, name, usage_calls, usage_limit, period_start, period_end, created_at, updated_at]
+      filter:
+        org_members:
+          user_id: { _eq: X-Hasura-User-Id }
+      # any member (owner/editor/viewer) can read their org's usage — viewers
+      # need this for the "used / allowed" UI requirement.
+update_permissions:
+  - role: user
+    permission:
+      columns: [name]
+      filter:
+        org_members:
+          _and:
+            - user_id: { _eq: X-Hasura-User-Id }
+            - role: { _eq: owner }
+      check: null

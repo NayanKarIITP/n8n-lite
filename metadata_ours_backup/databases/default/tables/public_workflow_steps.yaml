@@ -1,0 +1,98 @@
+# LAYER 2 ENFORCEMENT LIVES HERE.
+# db_write and notify step types may only be inserted/updated-into by an
+# org OWNER. This is enforced in the `check` expression below — a raw
+# GraphQL mutation from a malicious editor client will be rejected by
+# Postgres/Hasura's permission engine itself, not by hidden UI. See
+# scripts/security-tests/07-editor-cannot-create-db-write.mjs and
+# 08-editor-cannot-create-notify.mjs for the tests that exercise this.
+
+table:
+  schema: public
+  name: workflow_steps
+object_relationships:
+  - name: workflow
+    using:
+      foreign_key_constraint_on: workflow_id
+array_relationships:
+  - name: step_runs
+    using:
+      foreign_key_constraint_on:
+        column: workflow_step_id
+        table:
+          schema: public
+          name: step_runs
+select_permissions:
+  - role: user
+    permission:
+      columns: [id, workflow_id, position, type, config, created_at, updated_at]
+      filter:
+        workflow:
+          organization:
+            org_members:
+              user_id: { _eq: X-Hasura-User-Id }
+insert_permissions:
+  - role: user
+    permission:
+      columns: [workflow_id, position, type, config]
+      check:
+        _and:
+          - workflow:
+              organization:
+                org_members:
+                  _and:
+                    - user_id: { _eq: X-Hasura-User-Id }
+                    - role: { _in: [owner, editor] }
+          - _or:
+              # editor path: only non-restricted step types allowed
+              - _and:
+                  - type: { _nin: [db_write, notify] }
+                  - workflow:
+                      organization:
+                        org_members:
+                          _and:
+                            - user_id: { _eq: X-Hasura-User-Id }
+                            - role: { _eq: editor }
+              # owner path: any step type allowed
+              - workflow:
+                  organization:
+                    org_members:
+                      _and:
+                        - user_id: { _eq: X-Hasura-User-Id }
+                        - role: { _eq: owner }
+update_permissions:
+  - role: user
+    permission:
+      columns: [position, type, config]
+      filter:
+        workflow:
+          organization:
+            org_members:
+              _and:
+                - user_id: { _eq: X-Hasura-User-Id }
+                - role: { _in: [owner, editor] }
+      check:
+        _or:
+          - _and:
+              - type: { _nin: [db_write, notify] }
+              - workflow:
+                  organization:
+                    org_members:
+                      _and:
+                        - user_id: { _eq: X-Hasura-User-Id }
+                        - role: { _eq: editor }
+          - workflow:
+              organization:
+                org_members:
+                  _and:
+                    - user_id: { _eq: X-Hasura-User-Id }
+                    - role: { _eq: owner }
+delete_permissions:
+  - role: user
+    permission:
+      filter:
+        workflow:
+          organization:
+            org_members:
+              _and:
+                - user_id: { _eq: X-Hasura-User-Id }
+                - role: { _in: [owner, editor] }

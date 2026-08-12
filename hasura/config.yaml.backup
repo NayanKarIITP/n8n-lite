@@ -1,0 +1,12 @@
+version: 3
+# Hasura CLI reads {{VAR}} from a --envfile (see README "Local setup").
+# NHOST_HASURA_URL is the Hasura BASE url (no /v1/graphql suffix) — Nhost
+# exposes this as a system env var on your project. Do not use
+# NHOST_GRAPHQL_URL here; that includes the /v1/graphql path the CLI
+# appends itself.
+endpoint: "{{NHOST_HASURA_URL}}"
+admin_secret: "{{NHOST_ADMIN_SECRET}}"
+metadata_directory: metadata
+actions:
+  kind: synchronous
+  handler_webhook_baseurl: "{{ACTION_BASE_URL}}"

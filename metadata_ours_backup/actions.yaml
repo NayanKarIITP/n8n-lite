@@ -1,0 +1,43 @@
+actions:
+  - name: triggerWorkflowRun
+    definition:
+      kind: synchronous
+      handler: "{{ACTION_BASE_URL}}/api/actions/trigger-workflow-run"
+      forward_client_headers: true
+      headers:
+        - name: x-action-secret
+          value_from_env: ACTION_SECRET
+      timeout: 60
+    permissions:
+      - role: user
+    comment: >
+      Authorization (org membership + role owner/editor, quota check) is
+      performed inside the handler using the forwarded X-Hasura-User-Id /
+      X-Hasura-Role headers plus a fresh org_members lookup — never trusting
+      client-supplied workflow_id-implies-authorized. See
+      app/api/actions/trigger-workflow-run/route.ts.
+
+  - name: approveStep
+    definition:
+      kind: synchronous
+      handler: "{{ACTION_BASE_URL}}/api/actions/approve-step"
+      forward_client_headers: true
+      headers:
+        - name: x-action-secret
+          value_from_env: ACTION_SECRET
+      timeout: 30
+    permissions:
+      - role: user
+    comment: >
+      Re-derives the workflow's organization from step_run_id -> workflow_run
+      -> workflow -> org_id, then checks the caller's org_members role
+      server-side before resuming execution. See
+      app/api/actions/approve-step/route.ts.
+
+custom_types:
+  enums: []
+  input_objects: []
+  objects:
+    - name: TriggerWorkflowRunOutput
+    - name: ApproveStepOutput
+  scalars: []

@@ -1,0 +1,13 @@
+# NOTE: On an Nhost project, Hasura's "default" datasource is already
+# configured by Nhost itself (it owns the managed Postgres connection) —
+# do NOT declare connection_info here and apply it, or you will attempt to
+# redefine a datasource Nhost already manages. This file intentionally
+# contains no connection_info. Table tracking/relationships/permissions
+# for "default" are applied via the safe merge workflow in README
+# "Local setup" step 4 (export live metadata first, merge this directory
+# in, then apply) — never a blind `hasura metadata apply` against a fresh
+# metadata directory, which would replace (and could wipe) Nhost's own
+# auth/storage metadata.
+- name: default
+  kind: postgres
+  tables: "!include default/tables/tables.yaml"

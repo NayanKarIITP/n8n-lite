@@ -1,0 +1,36 @@
+table:
+  schema: public
+  name: notification_events
+object_relationships:
+  - name: organization
+    using:
+      foreign_key_constraint_on: org_id
+select_permissions:
+  - role: user
+    permission:
+      columns: [id, org_id, step_run_id, channel, payload, delivered, delivered_at, created_at]
+      filter:
+        organization:
+          org_members:
+            user_id: { _eq: X-Hasura-User-Id }
+event_triggers:
+  - name: deliver_notification
+    definition:
+      enable_manual: false
+      insert:
+        columns: "*"
+    webhook: "{{ACTION_BASE_URL}}/api/webhooks/notify"
+    headers:
+      - name: x-action-secret
+        value_from_env: ACTION_SECRET
+    retry_conf:
+      num_retries: 3
+      interval_sec: 10
+      timeout_sec: 20
+    comment: >
+      This is the event-driven `notify` step implementation required by the
+      assignment: the execution engine INSERTs a row into
+      notification_events (rather than calling Slack/email directly), and
+      this Hasura Event Trigger fires the webhook handler which does the
+      actual delivery (or, in stub mode, logs + marks delivered=true after a
+      short delay). Keeps notify decoupled and event-driven end to end.

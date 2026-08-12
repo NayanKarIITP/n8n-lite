@@ -1,0 +1,77 @@
+:root {
+  color-scheme: light;
+  --bg: #0b0d12;
+  --panel: #12151c;
+  --border: #232733;
+  --text: #e7e9ee;
+  --muted: #8b93a7;
+  --accent: #6ea8fe;
+  --ok: #3ecf8e;
+  --warn: #f5a524;
+  --err: #f5524a;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+a { color: var(--accent); text-decoration: none; }
+
+.container { max-width: 960px; margin: 0 auto; padding: 24px; }
+
+.card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.btn {
+  background: var(--accent);
+  color: #08101f;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-secondary {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+input, select, textarea {
+  background: #0d1017;
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 6px 8px;
+  width: 100%;
+}
+
+.status-pill {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.status-pending { background: #232733; color: var(--muted); }
+.status-running { background: #1e2a44; color: var(--accent); }
+.status-completed { background: #123d2c; color: var(--ok); }
+.status-failed { background: #3d1414; color: var(--err); }
+.status-paused { background: #3d3014; color: var(--warn); }
+.status-skipped { background: #232733; color: var(--muted); }
+.status-cancelled { background: #232733; color: var(--muted); }

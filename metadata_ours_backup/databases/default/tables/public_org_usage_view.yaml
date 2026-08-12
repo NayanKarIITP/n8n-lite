@@ -1,0 +1,23 @@
+table:
+  schema: public
+  name: org_usage_view
+array_relationships:
+  - name: org_members
+    using:
+      manual_configuration:
+        remote_table:
+          schema: public
+          name: org_members
+        column_mapping:
+          org_id: org_id
+select_permissions:
+  - role: user
+    permission:
+      columns: [org_id, name, usage_calls, usage_limit, usage_remaining, period_start, period_end]
+      filter:
+        org_members:
+          user_id: { _eq: X-Hasura-User-Id }
+comment: >
+  Aggregation requirement #1 ("org usage this month"). usage_calls/usage_limit
+  are also exposed directly on `organizations` for convenience; this view
+  adds the derived `usage_remaining` field for the frontend usage bar.
