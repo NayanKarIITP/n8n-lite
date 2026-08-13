@@ -15,25 +15,28 @@ interface StepRun {
   started_at: string | null;
   completed_at: string | null;
   workflow_step: { id: string; position: number; type: string };
+  // GraphQL subscriptions may only select one top-level root field, so the
+  // parent run's status is read via step_runs' own "workflow_run" object
+  // relationship instead of a second top-level query — every step_run row
+  // carries the same run info, we just read it off the first one.
+  workflow_run: { id: string; status: string; started_at: string | null; completed_at: string | null; error: string | null };
 }
 
 export default function RunPage({ params }: { params: { id: string; runId: string } }) {
-  const { data, loading, error } = useSubscription<{
-    step_runs: StepRun[];
-    workflow_runs_by_pk: { id: string; status: string; started_at: string | null; completed_at: string | null; error: string | null } | null;
-  }>(WORKFLOW_RUN_STEP_RUNS_SUBSCRIPTION, {
-    variables: { workflowRunId: params.runId },
-  });
+  const { data, loading, error } = useSubscription<{ step_runs: StepRun[] }>(
+    WORKFLOW_RUN_STEP_RUNS_SUBSCRIPTION,
+    { variables: { workflowRunId: params.runId } }
+  );
 
   const [approveStep, { loading: approving }] = useMutation(APPROVE_STEP);
 
   if (loading && !data) return <div className="container">Connecting to live updates…</div>;
   if (error) return <div className="container">Subscription error: {error.message}</div>;
 
-  const run = data?.workflow_runs_by_pk;
   const stepRuns = [...(data?.step_runs ?? [])].sort(
     (a, b) => a.workflow_step.position - b.workflow_step.position
   );
+  const run = stepRuns[0]?.workflow_run ?? null;
 
   async function onApprove(stepRunId: string) {
     try {
@@ -50,6 +53,13 @@ export default function RunPage({ params }: { params: { id: string; runId: strin
         <div className="card">
           Status: <span className={`status-pill status-${run.status}`}>{run.status}</span>
           {run.error && <p style={{ color: "var(--err)" }}>{run.error}</p>}
+        </div>
+      )}
+      {!run && stepRuns.length === 0 && (
+        <div className="card">
+          <p style={{ color: "var(--muted)" }}>
+            No step runs yet for this run ID — either it hasn&apos;t started, or you don&apos;t have access to it.
+          </p>
         </div>
       )}
 

@@ -104,13 +104,13 @@ export const WORKFLOW_RUN_STEP_RUNS_SUBSCRIPTION = gql`
         position
         type
       }
-    }
-    workflow_runs_by_pk(id: $workflowRunId) {
-      id
-      status
-      started_at
-      completed_at
-      error
+      workflow_run {
+        id
+        status
+        started_at
+        completed_at
+        error
+      }
     }
   }
 `;
