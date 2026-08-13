@@ -9,4 +9,4 @@ admin_secret: "%ZqfmfCFfPZr:*^V(f,t0rDnmTo8ipm)"
 metadata_directory: metadata
 actions:
   kind: synchronous
-  handler_webhook_baseurl: "http://localhost:3000"
+  handler_webhook_baseurl:"https://n8n-lite.vercel.app/"
