@@ -76,8 +76,14 @@ export async function runWorkflow(params: {
         context.lastLLMOutput = (run.output as Record<string, unknown>).text as string | undefined;
       }
     }
-    startIndex = steps.findIndex((s) => s.id === resumeFromStepId);
-    if (startIndex === -1) startIndex = 0;
+    // resumeFromStepId is the approval_gate step itself — execution must
+    // continue with the NEXT step, not re-execute the gate (which would
+    // unconditionally re-pause it, exactly the bug this comment documents:
+    // observed in production as an approved step_run whose status flipped
+    // back to "paused" immediately after approval, because the loop below
+    // was starting at the gate's own index instead of index + 1).
+    const gateIndex = steps.findIndex((s) => s.id === resumeFromStepId);
+    startIndex = gateIndex === -1 ? 0 : gateIndex + 1;
   }
 
   for (let i = startIndex; i < steps.length; i++) {
