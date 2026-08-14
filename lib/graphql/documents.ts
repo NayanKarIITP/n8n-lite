@@ -187,3 +187,41 @@ export const APPROVE_STEP = gql`
     }
   }
 `;
+
+// --- Member onboarding --------------------------------------------------
+
+export const CREATE_INVITATION = gql`
+  mutation CreateInvitation($org_id: uuid!, $email: String!, $role: org_role!) {
+    insert_org_invitations_one(object: { org_id: $org_id, email: $email, role: $role }) {
+      id
+      token
+      email
+      role
+      status
+    }
+  }
+`;
+
+export const MY_ORG_INVITATIONS = gql`
+  query MyOrgInvitations($orgId: uuid!) {
+    org_invitations(where: { org_id: { _eq: $orgId } }, order_by: { created_at: desc }) {
+      id
+      email
+      role
+      status
+      token
+      created_at
+      accepted_at
+    }
+  }
+`;
+
+export const ACCEPT_INVITATION = gql`
+  mutation AcceptInvitation($token: uuid!) {
+    acceptInvitation(token: $token) {
+      org_id
+      role
+      status
+    }
+  }
+`;

@@ -1,0 +1,36 @@
+# Layer 2 pattern, same as workflow_steps/workflow_triggers: only an
+# owner may create an invitation for their org. Select is also owner-only
+# (the pending-invites list on the dashboard) — an invitee does NOT read
+# this table directly; they only ever interact via the token in the URL
+# and the acceptInvitation Action, which looks the row up server-side
+# with the admin secret after verifying the caller's identity.
+
+table:
+  schema: public
+  name: org_invitations
+object_relationships:
+  - name: organization
+    using:
+      foreign_key_constraint_on: org_id
+select_permissions:
+  - role: user
+    permission:
+      columns: [id, org_id, email, role, invited_by, token, status, accepted_by, accepted_at, created_at]
+      filter:
+        organization:
+          org_members:
+            _and:
+              - user_id: { _eq: X-Hasura-User-Id }
+              - role: { _eq: owner }
+insert_permissions:
+  - role: user
+    permission:
+      columns: [org_id, email, role]
+      set:
+        invited_by: X-Hasura-User-Id
+      check:
+        organization:
+          org_members:
+            _and:
+              - user_id: { _eq: X-Hasura-User-Id }
+              - role: { _eq: owner }

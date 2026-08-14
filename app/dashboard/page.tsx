@@ -5,7 +5,13 @@ import { useQuery, useMutation } from "@apollo/client";
 import { useAuthenticationStatus, useSignOut, useUserId } from "@nhost/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { MY_ORGS, ORG_WORKFLOWS_DETAILED, CREATE_WORKFLOW } from "@/lib/graphql/documents";
+import {
+  MY_ORGS,
+  ORG_WORKFLOWS_DETAILED,
+  CREATE_WORKFLOW,
+  CREATE_INVITATION,
+  MY_ORG_INVITATIONS,
+} from "@/lib/graphql/documents";
 
 interface OrgMembership {
   id: string;
@@ -44,6 +50,7 @@ export default function DashboardPage() {
   }
 
   const canEdit = activeMembership?.role === "owner" || activeMembership?.role === "editor";
+  const isOwner = activeMembership?.role === "owner";
 
   async function onCreateWorkflow(e: React.FormEvent) {
     e.preventDefault();
@@ -65,8 +72,8 @@ export default function DashboardPage() {
       {orgsLoading && <p>Loading organizations…</p>}
       {!orgsLoading && memberships.length === 0 && (
         <p className="card">
-          You are not a member of any organization yet. Ask an owner to add user_id <code>{userId}</code> to{" "}
-          <code>org_members</code>.
+          You are not a member of any organization yet. Ask an owner to invite you (see &quot;Invite member&quot;
+          below), or ask them to add user_id <code>{userId}</code> to <code>org_members</code> directly.
         </p>
       )}
 
@@ -88,6 +95,8 @@ export default function DashboardPage() {
           )}
         </div>
       )}
+
+      {activeOrgId && isOwner && <MemberInvitePanel orgId={activeOrgId} />}
 
       {activeOrgId && (
         <>
@@ -143,6 +152,75 @@ export default function DashboardPage() {
             );
           })}
         </>
+      )}
+    </div>
+  );
+}
+
+// Owner-only: create an invitation (normal Hasura insert mutation, no
+// admin secret — enforced by the org_invitations owner-only insert
+// permission) and list pending/accepted invites for this org. The
+// invite link itself must be shared by the owner through any channel
+// (this app does not send email — same documented stub philosophy as
+// the `notify` step); accepting it goes through the acceptInvitation
+// Action, which independently verifies the invitee's real email.
+function MemberInvitePanel({ orgId }: { orgId: string }) {
+  const [email, setEmail] = useState("");
+  const [role, setRole] = useState<"owner" | "editor" | "viewer">("viewer");
+  const [createInvitation, { loading: inviting, error: inviteError }] = useMutation(CREATE_INVITATION);
+  const { data, loading, refetch } = useQuery(MY_ORG_INVITATIONS, { variables: { orgId } });
+
+  async function onInvite(e: React.FormEvent) {
+    e.preventDefault();
+    if (!email.trim()) return;
+    await createInvitation({ variables: { org_id: orgId, email: email.trim(), role } });
+    setEmail("");
+    refetch();
+  }
+
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+
+  return (
+    <div className="card">
+      <strong>Invite member</strong>
+      <form onSubmit={onInvite} style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+        <input
+          placeholder="invitee@email.com"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          style={{ flex: 1, minWidth: 200 }}
+        />
+        <select value={role} onChange={(e) => setRole(e.target.value as typeof role)}>
+          <option value="viewer">viewer</option>
+          <option value="editor">editor</option>
+          <option value="owner">owner</option>
+        </select>
+        <button className="btn" disabled={inviting} type="submit">
+          {inviting ? "Inviting…" : "Send invite"}
+        </button>
+      </form>
+      {inviteError && <p style={{ color: "var(--err)", fontSize: 13 }}>{inviteError.message}</p>}
+
+      {loading && <p style={{ color: "var(--muted)", fontSize: 13 }}>Loading invitations…</p>}
+      {data?.org_invitations?.length > 0 && (
+        <div style={{ marginTop: 12 }}>
+          {data.org_invitations.map((inv: any) => (
+            <div key={inv.id} style={{ fontSize: 13, padding: "6px 0", borderTop: "1px solid var(--border)" }}>
+              <span style={{ color: "var(--muted)" }}>{inv.email}</span> — {inv.role} —{" "}
+              <span className={`status-pill status-${inv.status === "accepted" ? "completed" : "pending"}`}>
+                {inv.status}
+              </span>
+              {inv.status === "pending" && origin && (
+                <div style={{ marginTop: 4 }}>
+                  <code style={{ fontSize: 11, wordBreak: "break-all" }}>
+                    {origin}/invite/{inv.token}
+                  </code>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );

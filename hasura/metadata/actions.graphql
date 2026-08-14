@@ -1,0 +1,22 @@
+type Mutation {
+  triggerWorkflowRun(workflow_id: uuid!): TriggerWorkflowRunOutput
+  approveStep(step_run_id: uuid!): ApproveStepOutput
+  acceptInvitation(token: uuid!): AcceptInvitationOutput
+}
+
+type TriggerWorkflowRunOutput {
+  workflow_run_id: uuid!
+  status: String!
+}
+
+type ApproveStepOutput {
+  step_run_id: uuid!
+  workflow_run_id: uuid!
+  status: String!
+}
+
+type AcceptInvitationOutput {
+  org_id: uuid!
+  role: String!
+  status: String!
+}
